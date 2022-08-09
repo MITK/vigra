@@ -41,6 +41,7 @@
 #include <vigra/windows.h>
 #include <iostream>
 #include <iomanip>
+#include <random>
 
 #include <vigra/multi_pointoperators.hxx>
 #include <vigra/timing.hxx>
@@ -909,7 +910,7 @@ class OOB_Error : public VisitorBase
         {
             ArrayVector<int> oob_indices;
             ArrayVector<int> cts(class_count, 0);
-            std::random_shuffle(indices.begin(), indices.end());
+            std::shuffle(indices.begin(), indices.end(), std::mt19937(std::random_device()()));
             for(int ii = 0; ii < rf.ext_param_.row_count_; ++ii)
             {
                 if(!sm.is_used()[indices[ii]] && cts[pr.response()(indices[ii], 0)] < 40000)

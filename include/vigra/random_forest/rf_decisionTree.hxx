@@ -90,6 +90,8 @@ class DecisionTree
     ProblemSpec<> ext_param_;
     unsigned int classCount_;
 
+    std::map<int, int> m_Parents;
+
 
   public:
     /* \brief Create tree with parameters */
@@ -350,6 +352,22 @@ void DecisionTree::learn(   MultiArrayView<2, U, C> const       & features,
     continueLearn(features,labels,stack_entry,split,stop,visitor,randint);
 }
 
+template < class TRandomForest>
+int GetTreeDepthForNode(int nodeIndex, TRandomForest* rf)
+{
+  int depth = 0;
+  while (true)
+  {
+    if (nodeIndex < 1)
+    {
+      break;
+    }
+    ++depth;
+    nodeIndex = rf->m_Parents[nodeIndex];
+  }
+  return depth;
+}
+
 template <  class U, class C,
             class U2, class C2,
             class StackEntry_t,
@@ -374,6 +392,11 @@ void DecisionTree::continueLearn(   MultiArrayView<2, U, C> const       & featur
     size_t last_node_pos = 0;
     StackEntry_t top=stack.back();
 
+    Split_t* splitPointer = &split;
+    bool isDepthSplitter = true;
+
+    int maximumTreeDepth = splitPointer->GetMaximumTreeDepth();
+
     while(!stack.empty())
     {
 
@@ -392,7 +415,20 @@ void DecisionTree::continueLearn(   MultiArrayView<2, U, C> const       & featur
         //kind of node to make
         TreeInt NodeID;
         
-        if(stop(top))
+        bool depthStop = false;
+        if (isDepthSplitter)
+        {
+          int currentDepthLevel;
+          if (top.leftParent != StackEntry_t::DecisionTreeNoParent)
+            currentDepthLevel = GetTreeDepthForNode(top.leftParent, this);
+          else
+            currentDepthLevel = GetTreeDepthForNode(top.rightParent, this);
+
+          depthStop = (currentDepthLevel >= maximumTreeDepth);
+        }
+        if(stop(top) || (depthStop))
+
+        //if (stop(top) || currentDepthLevel >= MaximumSplitDepth(split))
             NodeID = split.makeTerminalNode(features, 
                                             labels, 
                                             top, 
@@ -421,17 +457,20 @@ void DecisionTree::continueLearn(   MultiArrayView<2, U, C> const       & featur
         // Using InteriorNodeBase because exact parameter form not needed.
         // look at the Node base before getting scared.
         last_node_pos = topology_.size();
+        m_Parents[last_node_pos] = StackEntry_t::DecisionTreeNoParent;
         if(top.leftParent != StackEntry_t::DecisionTreeNoParent)
         {
             NodeBase(topology_, 
                      parameters_, 
                      top.leftParent).child(0) = last_node_pos;
+            m_Parents[last_node_pos] = top.leftParent;
         }
         else if(top.rightParent != StackEntry_t::DecisionTreeNoParent)
         {
             NodeBase(topology_, 
                      parameters_, 
                      top.rightParent).child(1) = last_node_pos;
+            m_Parents[last_node_pos] = top.rightParent;
         }
 
 

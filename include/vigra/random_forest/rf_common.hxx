@@ -558,6 +558,7 @@ public:
     int                     is_weighted_;     // class_weights_ are used
     double                  precision_;       // termination criterion for regression loss
     int                     response_size_; 
+    int                     max_tree_depth;
         
     template<class T> 
     void to_classlabel(int index, T & out) const
@@ -583,7 +584,8 @@ public:
         EQUALS(class_weights_),
         EQUALS(is_weighted_),
         EQUALS(precision_),
-        EQUALS(response_size_)
+        EQUALS(response_size_),
+        EQUALS(max_tree_depth)
     {
         std::back_insert_iterator<ArrayVector<Label_t> >
                         iter(classes);
@@ -604,7 +606,8 @@ public:
         EQUALS(class_weights_),
         EQUALS(is_weighted_),
         EQUALS(precision_),
-        EQUALS(response_size_)
+        EQUALS(response_size_),
+        EQUALS(max_tree_depth)
     {
         std::back_insert_iterator<ArrayVector<Label_t> >
                         iter(classes);
@@ -624,7 +627,8 @@ public:
         EQUALS(used_);
         EQUALS(is_weighted_);
         EQUALS(precision_);
-        EQUALS(response_size_)
+        EQUALS(response_size_);
+        EQUALS(max_tree_depth)
         class_weights_.clear();
         std::back_insert_iterator<ArrayVector<double> >
                         iter2(class_weights_);
@@ -648,7 +652,8 @@ public:
         EQUALS(used_);
         EQUALS(is_weighted_);
         EQUALS(precision_);
-        EQUALS(response_size_)
+        EQUALS(response_size_);
+        EQUALS(max_tree_depth)
         class_weights_.clear();
         std::back_insert_iterator<ArrayVector<double> >
                         iter2(class_weights_);
@@ -677,7 +682,8 @@ public:
         COMPARE(used_);
         COMPARE(class_weights_);
         COMPARE(classes);
-        COMPARE(response_size_)
+        COMPARE(response_size_);
+        COMPARE(max_tree_depth)
         #undef COMPARE
         return result;
     }
@@ -715,6 +721,7 @@ public:
         PULL(used_, int);
         PULL(precision_, double);
         PULL(response_size_, int);
+        PULL(max_tree_depth, int);
         if(is_weighted_)
         {
             vigra_precondition(end - begin == 10 + 2*class_count_, 
@@ -747,6 +754,7 @@ public:
         PUSH(used_);
         PUSH(precision_);
         PUSH(response_size_);
+        PUSH(max_tree_depth);
         if(is_weighted_)
         {
             std::copy(class_weights_.begin(),
@@ -773,6 +781,7 @@ public:
         PULL(used_, int);
         PULL(precision_, double);
         PULL(response_size_, int);
+        PULL(max_tree_depth, int);
         class_weights_ = in["class_weights_"];
         #undef PUSH
     }
@@ -789,6 +798,7 @@ public:
         PUSH(used_);
         PUSH(precision_);
         PUSH(response_size_);
+        PUSH(max_tree_depth);
         in["class_weights_"] = class_weights_;
         #undef PUSH
     }
@@ -805,7 +815,8 @@ public:
         used_(false),
         is_weighted_(false),
         precision_(0.0),
-        response_size_(1)
+        response_size_(1),
+        max_tree_depth(50)
     {}
 
 
@@ -857,7 +868,7 @@ public:
         is_weighted_ = false;
         precision_   = 0.0;
         response_size_ = 0;
-
+        max_tree_depth = 50;
     }
 
     bool used() const

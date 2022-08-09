@@ -1409,9 +1409,6 @@ class Kernel1D
         {}
 
         ~InitProxy() 
-#ifndef _MSC_VER
-             throw(PreconditionViolation)
-#endif
         {
             vigra_precondition(count_ == 1 || count_ == sum_,
                   "Kernel1D::initExplicitly(): "

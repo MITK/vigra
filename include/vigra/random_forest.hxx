@@ -165,6 +165,7 @@ class RandomForest
     ProblemSpec_t                               ext_param_;
     /*mutable ArrayVector<int>                    tree_indices_;*/
     rf::visitors::OnlineLearnVisitor            online_visitor_;
+    bool                                        multithreadPrediction;  // enable/disable multithreaded predictProbabilities and predictLabels
 
 
     void reset()
@@ -584,12 +585,25 @@ class RandomForest
     {
         vigra_precondition(features.shape(0) == labels.shape(0),
             "RandomForest::predictLabels(): Label array has wrong size.");
+        if (multithreadPrediction)
+        {
+#pragma omp parallel for
+            for(int k=0; k<features.shape(0); ++k)
+            {
+                vigra_precondition(!detail::contains_nan(rowVector(features, k)),
+                    "RandomForest::predictLabels(): NaN in feature matrix.");
+                labels(k,0) = detail::RequiresExplicitCast<T>::cast(predictLabel(rowVector(features, k), rf_default()));
+            }
+        }
+        else
+        {
         for(int k=0; k<features.shape(0); ++k)
         {
             vigra_precondition(!detail::contains_nan(rowVector(features, k)),
                 "RandomForest::predictLabels(): NaN in feature matrix.");
             labels(k,0) = detail::RequiresExplicitCast<T>::cast(predictLabel(rowVector(features, k), rf_default()));
         }
+    }
     }
 
     /** \brief predict multiple labels with given features
@@ -1261,6 +1275,60 @@ void RandomForest<LabelType, PreprocessorTag>
     }
     */
     //Classify for each row.
+    if (multithreadPrediction)
+    {
+#pragma omp parallel for
+        for(int row=0; row < rowCount(features); ++row)
+        {
+            MultiArrayView<2, U, StridedArrayTag> currentRow(rowVector(features, row));
+
+            // when the features contain an NaN, the instance doesn't belong to any class
+            // => indicate this by returning a zero probability array.
+            if(detail::contains_nan(currentRow))
+            {
+                rowVector(prob, row).init(0.0);
+                continue;
+            }
+
+            ArrayVector<double>::const_iterator weights;
+
+            //totalWeight == totalVoteCount!
+            double totalWeight = 0.0;
+
+            //Let each tree classify...
+            for(int k=0; k<options_.tree_count_; ++k)
+            {
+                //get weights predicted by single tree
+                weights = trees_[k /*tree_indices_[k]*/].predict(currentRow);
+
+                //update votecount.
+                int weighted = options_.predict_weighted_;
+                for(int l=0; l<ext_param_.class_count_; ++l)
+                {
+                    double cur_w = weights[l] * (weighted * (*(weights-1))
+                                               + (1-weighted));
+                    prob(row, l) += (T)cur_w;
+                    //every weight in totalWeight.
+                    totalWeight += cur_w;
+                }
+                if(stop.after_prediction(weights,
+                                         k,
+                                         rowVector(prob, row),
+                                         totalWeight))
+                {
+                    break;
+                }
+            }
+
+            //Normalise votes in each row by total VoteCount (totalWeight
+            for(int l=0; l< ext_param_.class_count_; ++l)
+            {
+                prob(row, l) /= detail::RequiresExplicitCast<T>::cast(totalWeight);
+            }
+        }
+    }
+    else
+    {
     for(int row=0; row < rowCount(features); ++row)
     {
         MultiArrayView<2, U, StridedArrayTag> currentRow(rowVector(features, row));
@@ -1308,6 +1376,7 @@ void RandomForest<LabelType, PreprocessorTag>
         {
             prob(row, l) /= detail::RequiresExplicitCast<T>::cast(totalWeight);
         }
+    }
     }
 
 }

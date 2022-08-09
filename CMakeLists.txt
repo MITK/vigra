@@ -70,7 +70,12 @@ IF(WITH_OPENEXR)
 ENDIF()
 
 IF(WITH_HDF5)
+    FIND_PACKAGE(HDF5 PATHS ${HDF5_DIR} PATH_SUFFIXES hdf5 NO_DEFAULT_PATH NO_MODULE)
+  IF(NOT HDF5_FOUND)
     VIGRA_FIND_PACKAGE(HDF5)
+  ENDIF()
+  # HDF5 changed their config, this ports the new style to the old style
+  set(HDF5_LIBRARIES ${HDF5_EXPORT_LIBRARIES})
 ENDIF()
 
 IF(WITH_BOOST_GRAPH)
@@ -395,3 +400,4 @@ IF(NOT TIFF_FOUND OR NOT JPEG_FOUND OR NOT PNG_FOUND OR NOT FFTW3_FOUND OR
 ENDIF()
 
 MESSAGE( STATUS "---------------------------------------------------------" )
+

@@ -50,7 +50,11 @@
 namespace vigra
 {
 
-
+class DepthSplitterBase
+{
+public:
+  virtual int GetMaximumTreeDepth() const = 0;
+};
 
 enum NodeTags
 {

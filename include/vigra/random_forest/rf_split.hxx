@@ -108,6 +108,11 @@ class SplitBase
         \ref SplitBase::findBestSplit() or \ref SplitBase::makeTerminalNode().
     **/
 
+      virtual int GetMaximumTreeDepth() const
+      {
+        return ext_param_.max_tree_depth;
+      }
+
     template<class T>
     void set_external_parameters(ProblemSpec<T> const & in)
     {
